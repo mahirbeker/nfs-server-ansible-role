@@ -1,0 +1,6 @@
+- name: Ubuntu NFS Installation
+  hosts: all
+  gather_facts: False
+  become: True
+  roles:
+   - nfs_server

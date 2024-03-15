@@ -1,0 +1,115 @@
+#SERVERSIDE AND CLIENTSIDE COMMANDS
+
+- name: Install Packages on server
+  apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+  loop:
+    - vim
+    - nfs-kernel-server
+    - tree
+  when: "{{decision_server}}"
+
+- name: Install Packages on client
+  apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+  loop:
+    - vim
+    - nfs-common
+  when: "{{decision_client}}"
+
+- name: Start NFS Service
+  service:
+    name: nfs-kernel-server
+    state: started
+    enabled: yes
+  when: "{{decision_server}}"
+
+
+#SERVERSIDE TASKS
+
+- name: Create Server Folders
+  file:
+    path: "{{server_folder}}"
+    state: directory
+    recurse: yes
+  when: "{{decision_server}}"
+
+- name: Server Folder Ownhership
+  command: chown -R nobody:nogroup "{{server_folder}}"
+  when: "{{decision_server}}"
+
+- name: Server Folders Permissions
+  command: chmod -R 777 /exports
+  when: "{{decision_server}}"
+
+- name: Server Folders Permissions
+  command: chmod -R 777 /exports "{{server_folder}}"
+  when: "{{decision_server}}"
+
+- name: Backup exports file
+  ansible.builtin.shell:
+    cmd: mv /etc/exports /etc/exports.origin
+  when: "{{decision_server}}"
+
+- name: Backup exports file
+  ansible.builtin.shell:
+    cmd: sudo touch /etc/exports
+  when: "{{decision_server}}"
+
+
+- name: Adding serverFolder and server_IP in export file
+  command: sudo echo '{{server_folder}} {{server_IP}}(rw,sync,no_subtree_check,no_root_squash)' >> /etc/exports
+  when: "{{decision_server}}"
+
+- name: UFW allow client
+  community.general.ufw:
+    rule: allow
+    src: "{{client_IP}}"
+  when: "{{decision_server}}"
+
+- name: Enable Firewall
+  ufw:
+    state: enabled
+  when: "{{decision_server}}"
+
+- name: Exporting NFS directory
+  ansible.builtin.shell:    
+    cmd: sudo exportfs -ar
+  when: "{{decision_server}}"
+
+
+
+#CLIENTSIDE TASKS
+
+- name: Create Client Folders
+  file:
+    path: "{{client_folder}}"
+    state: directory
+    mode: 0777
+    owner: root
+    group: root
+  when: "{{decision_client}}"
+
+
+- name: Mount Client Folder to Server Folder
+  ansible.posix.mount:
+    src: "{{mount_add}}"
+    path: "{{client_folder}}"
+    fstype: nfs
+    opts: rw,sync,hard
+    state: mounted
+  when: "{{decision_client}}"
+
+- name: Create Testing File on Client
+  file:
+    path: "{{client_file}}"
+    state: touch
+  when: "{{decision_client}}"
+
+- name: Adding Text in Testfile from server
+  command: echo "Hello World!" >> "{{client_file}}"
+  when: "{{decision_client}}"

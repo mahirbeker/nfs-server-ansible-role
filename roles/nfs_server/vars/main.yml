@@ -1,0 +1,8 @@
+client_IP: 10.0.26.43
+server_IP:  10.0.26.82
+mount_add: 10.0.26.82:/exports/serverfiles
+client_folder: /mnt/clientfiles
+client_file: /mnt/clientfiles/sampletext.txt
+server_folder: /exports/serverfiles
+decision_server: inventory_hostname == 'server'
+decision_client: inventory_hostname == 'client'
